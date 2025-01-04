@@ -8,6 +8,7 @@ __pycache__/
 *.pyd
 
 # Ignore any output directory and specific output files
+normalized_output.json
 output/
 scraped_output.json
 urls.json
