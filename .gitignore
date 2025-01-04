@@ -1,4 +1,20 @@
+# Ignore virtual environment
 venv/
+
+# Ignore Python cache files
 __pycache__/
 *.pyc
-output/*
+*.pyo
+*.pyd
+
+# Ignore any output directory and specific output files
+output/
+scraped_output.json
+urls.json
+
+# Ignore VS Code settings (if using VS Code)
+.vscode/
+
+# Ignore system files (optional)
+.DS_Store
+Thumbs.db
