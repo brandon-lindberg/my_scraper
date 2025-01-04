@@ -117,6 +117,44 @@ def aggregate_pages(raw_pages):
                             "application_guidelines": "",
                             "age_requirements": "",
                             "fees": "",
+                            "breakdown_fees": {
+                              "application_fee": "",
+                              "day_care_fee": {
+                                "tuition": "",  
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              },
+                              "kindergarten": {
+                                "tuition": "",
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              },
+                              "grade_elementary": {
+                                "tuition": "",
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              },
+                              "grade_junior_high": {
+                                "tuition": "",
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              },
+                              "grade_high_school": {
+                                "tuition": "",
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              },
+                              "summer_school": {
+                                "tuition": "",
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              },
+                              "other": {
+                                "tuition": "",
+                                "registration_fee": "",
+                                "maintenance_fee": ""
+                              }
+                            },
                             "procedure": ""
                         },
                         "events": [],

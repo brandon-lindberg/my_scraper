@@ -126,4 +126,3 @@ def crawl_website(site_id, base_url, max_pages=225):
                 to_visit.append(link)
 
     return results
-

@@ -24,7 +24,7 @@ def main():
             continue
 
         print(f"[*] Starting crawl for site ID {site_id} - {url}")
-        site_pages_data = crawl_website(site_id, url, max_pages=10)
+        site_pages_data = crawl_website(site_id, url, max_pages=50)
         all_results.extend(site_pages_data)
 
     # Write combined results to a JSON file
