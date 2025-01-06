@@ -1,57 +1,52 @@
 import json
 import os
 import re
+import string
 
-def merge_headers(existing_headers, new_headers):
+def is_clean_text(data, max_invalid_ratio=0.1):
     """
-    Merge new headers into existing_headers, removing duplicates.
-    existing_headers/new_headers look like:
-        {
-          "h1": [...],
-          "h2": [...],
-          "h3": [...]
-        }
-    """
-    for level in ["h1", "h2", "h3"]:
-        old_list = existing_headers.get(level, [])
-        new_list = new_headers.get(level, [])
-        merged = set(old_list) | set(new_list)  # union to remove duplicates
-        existing_headers[level] = list(merged)
-    return existing_headers
+    Check if the provided data contains primarily valid characters.
+    Allows printable ASCII and Japanese characters (Hiragana, Katakana, Kanji).
+    Returns True if the ratio of invalid characters is below the max_invalid_ratio.
 
-def get_page_title_from_headers(page_headers, fallback_title):
+    Parameters:
+    - data (str): The text data to validate.
+    - max_invalid_ratio (float): Maximum allowed ratio of invalid characters.
     """
-    Returns the first non-empty header from h1, h2, or h3.
-    If none exist, returns fallback_title (e.g., the <title> or "Untitled").
-    """
-    h1 = page_headers.get("h1", [])
-    h2 = page_headers.get("h2", [])
-    h3 = page_headers.get("h3", [])
+    if not data:
+        return False
 
-    # Ensure they are lists, not strings
-    if isinstance(h1, str):
-        h1 = [h1]
-    if isinstance(h2, str):
-        h2 = [h2]
-    if isinstance(h3, str):
-        h3 = [h3]
+    valid_char_pattern = re.compile(
+        r'['
+        r'\u3040-\u309F'  # Hiragana
+        r'\u30A0-\u30FF'  # Katakana
+        r'\u4E00-\u9FFF'  # Kanji
+        r'\uFF00-\uFFEF'  # Half-width and Full-width Forms
+        r' -~'             # Printable ASCII
+        r'\n\r\t'          # Common whitespace characters
+        r']'
+    )
 
-    if len(h1) > 0 and h1[0].strip():
-        return h1[0]
-    elif len(h2) > 0 and h2[0].strip():
-        return h2[0]
-    elif len(h3) > 0 and h3[0].strip():
-        return h3[0]
-    else:
-        return fallback_title if fallback_title else "Untitled"
+    total_chars = len(data)
+    if total_chars == 0:
+        return False
+
+    valid_chars = len(valid_char_pattern.findall(data))
+    invalid_chars = total_chars - valid_chars
+
+    invalid_ratio = invalid_chars / total_chars
+    return invalid_ratio <= max_invalid_ratio
 
 def add_sub_page(site_obj, page_title, page_data):
     """
     Add a sub-page entry to site_obj["content"]["sub_pages"],
-    skipping duplicates if needed.
+    skipping duplicates and data with excessive invalid characters.
     """
     if not page_data.strip():
-        return  # skip empty data
+        return  # Skip empty data
+
+    if not is_clean_text(page_data):
+        return  # Skip data with excessive strange characters
 
     # Check for exact duplicate data
     for sp in site_obj["content"]["sub_pages"]:
@@ -62,6 +57,24 @@ def add_sub_page(site_obj, page_title, page_data):
     site_obj["content"]["sub_pages"].append({
         "title": page_title,
         "data": page_data
+    })
+
+def add_staff_member(site_obj, name, role):
+    """
+    Add a staff member with their role to site_obj["content"]["structured_data"]["staff"]["staff_list"],
+    skipping duplicates.
+    """
+    if not name.strip() or not role.strip():
+        return  # Skip if name or role is empty
+
+    # Check for exact duplicate entry
+    for staff in site_obj["content"]["structured_data"]["staff"]["staff_list"]:
+        if staff["name"] == name and staff["role"] == role:
+            return  # Duplicate found
+
+    site_obj["content"]["structured_data"]["staff"]["staff_list"].append({
+        "name": name,
+        "role": role
     })
 
 def aggregate_pages(raw_pages):
@@ -87,12 +100,6 @@ def aggregate_pages(raw_pages):
                     "scrapedAt": page.get("scrapedAt", "")
                 },
                 "content": {
-                    "headers": {
-                        "h1": [],
-                        "h2": [],
-                        "h3": []
-                    },
-                    # Instead of one big "main_text", keep each page's data separately
                     "sub_pages": [],
                     "structured_data": {
                         "school_info": {
@@ -120,7 +127,7 @@ def aggregate_pages(raw_pages):
                             "breakdown_fees": {
                               "application_fee": "",
                               "day_care_fee": {
-                                "tuition": "",  
+                                "tuition": "",
                                 "registration_fee": "",
                                 "maintenance_fee": ""
                               },
@@ -155,7 +162,9 @@ def aggregate_pages(raw_pages):
                                 "maintenance_fee": ""
                               }
                             },
-                            "procedure": ""
+                            "procedure": "",
+                            "language_requirements_students": "",
+                            "language_requirements_parents": ""
                         },
                         "events": [],
                         "campus": {
@@ -176,10 +185,14 @@ def aggregate_pages(raw_pages):
                         "policies": {
                             "privacy_policy": "",
                             "terms_of_use": ""
+                        },
+                        "staff": {
+                            "staff_list": [],
+                            "board_members": []
                         }
+
                     }
                 },
-                "links": []
             }
         site_obj = aggregated[site_id]
 
@@ -193,22 +206,11 @@ def aggregate_pages(raw_pages):
             site_obj["source"]["title"] = page.get("title", "")
             site_obj["source"]["scrapedAt"] = current_scraped_at
 
-        # Merge top-level headers across the site
-        existing_headers = site_obj["content"]["headers"]
-        new_headers = page.get("headers", {})
-        site_obj["content"]["headers"] = merge_headers(existing_headers, new_headers)
-
         # Create a new sub-page entry for the current page
-        # Title: first non-empty h1/h2/h3 or fallback to <title>
-        page_title = get_page_title_from_headers(new_headers, fallback_title=page.get("title"))
+        # Title is now directly from page title without headers
+        page_title = page.get("title", "Untitled")
         page_data = page.get("data", "")
         add_sub_page(site_obj, page_title, page_data)
-
-        # Merge links (deduplicate via set)
-        existing_links = set(site_obj["links"])
-        new_links = set(page.get("links", []))
-        merged_links = existing_links.union(new_links)
-        site_obj["links"] = list(merged_links)
 
     return aggregated
 
