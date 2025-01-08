@@ -12,6 +12,7 @@ normalized_output.json
 output/
 scraped_output.json
 urls.json
+japanese_schools_output.json
 
 # Ignore VS Code settings (if using VS Code)
 .vscode/
